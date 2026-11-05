@@ -1,0 +1,1960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArkCare (ஆர்க் கேர்) — OPD Queue Admin Portal</title>
+  
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Tamil:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            tamil: ['"Noto Sans Tamil"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              900: '#064e3b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .badge-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .animate-slide-down { animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- TOAST CONTAINER -->
+  <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-3 max-w-md w-full pointer-events-none"></div>
+
+  <!-- PATIENT ALERT MODAL -->
+  <div id="patientAlertModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
+    <div class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-emerald-500/30 overflow-hidden animate-slide-down">
+      <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-xl">
+            📲
+          </div>
+          <div>
+            <h3 id="modalAlertTitle" class="font-extrabold text-base leading-tight">Patient Notification Sent</h3>
+            <p id="modalAlertSub" class="text-xs text-emerald-100 font-medium">ArkCare Multi-Channel Alert Gateway</p>
+          </div>
+        </div>
+        <button onclick="closePatientAlertModal()" class="text-white/80 hover:text-white text-xl font-bold p-1">
+          &times;
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+            <span id="modalAlertBadge" class="text-xs font-bold text-emerald-800">DISPATCHED TO MOBILE DEVICE</span>
+          </div>
+          <span class="text-[10px] font-mono bg-emerald-200/60 text-emerald-900 px-2 py-0.5 rounded-full font-bold">
+            SMS + WhatsApp + Push
+          </span>
+        </div>
+
+        <div id="modalAlertCardsContainer" class="space-y-3">
+          <!-- Dynamic message bubbles for 1 or 2 patients -->
+        </div>
+      </div>
+
+      <div class="bg-slate-50 px-6 py-3.5 border-t border-slate-200 flex items-center justify-between">
+        <span class="text-[11px] text-slate-500 font-medium">Sound chime played in hospital lounge</span>
+        <button onclick="closePatientAlertModal()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-lg text-xs transition-all shadow">
+          Acknowledge & Dismiss
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. AUTHENTICATION & LOGIN SCREEN (Matching ArkCare Mobile App UI Theme) -->
+  <div id="loginScreen" class="fixed inset-0 z-40 flex items-center justify-center bg-[#17554E] p-3 sm:p-6 overflow-y-auto">
+    <!-- Atmospheric Ambient Glows Matching ArkCare Ocean Pine Palette -->
+    <div class="fixed top-[-10%] left-[-5%] w-[550px] h-[550px] bg-[#267B73]/25 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="fixed bottom-[-10%] right-[-5%] w-[550px] h-[550px] bg-[#338F85]/20 rounded-full blur-[130px] pointer-events-none"></div>
+    <div class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-[#122825]/40 rounded-full blur-[150px] pointer-events-none"></div>
+
+    <div class="relative w-full max-w-lg my-auto">
+      <!-- Outer Card with Glassmorphic Accent and ArkCare Colors -->
+      <div class="bg-white rounded-3xl shadow-[0_25px_60px_-15px_rgba(18,40,37,0.45)] border border-[#CCE4DF] overflow-hidden">
+        
+        <!-- Header Banner with ArkCare Header Gradient -->
+        <div class="bg-gradient-to-r from-[#17554E] via-[#267B73] to-[#30897F] px-6 sm:px-8 pt-7 pb-6 text-white text-center relative overflow-hidden">
+          <!-- Geometric Background Texture Grid Lines -->
+          <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
+          
+          <div class="relative z-10 flex flex-col items-center">
+            <!-- Authentic ArkCare Brand Emblem Logo -->
+            <div class="inline-flex items-center justify-center p-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-md mb-3">
+              <img src="assets/arkcare_logo_white.png" alt="ArkCare Logo" class="h-9 w-auto object-contain" onerror="this.src='assets/arkcare_logo.png'" />
+            </div>
+
+            <h1 class="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+              <span>ArkCare Admin Console</span>
+              <span class="text-[10px] bg-emerald-400/20 text-emerald-200 border border-emerald-300/30 px-2 py-0.5 rounded-full uppercase tracking-widest font-mono">OPD Suite</span>
+            </h1>
+            <p class="text-xs text-teal-100/90 font-medium mt-1">Multi-Hospital OPD Queue & Outpatient Synchronization</p>
+          </div>
+        </div>
+
+        <div class="p-6 sm:p-8 bg-[#F7FAFA]">
+          
+          <!-- Tab Buttons: Sign In vs Sign Up (Styled like Mobile App Pill Tabs) -->
+          <div class="grid grid-cols-2 p-1 bg-[#EEF6F4] rounded-2xl mb-6 border border-[#CCE4DF] text-xs font-bold shadow-inner">
+            <button 
+              type="button" 
+              id="tabBtnSignIn" 
+              onclick="setAuthMode('signin')" 
+              class="py-2.5 rounded-xl transition-all text-[#17554E] bg-white shadow-sm flex items-center justify-center gap-2"
+            >
+              <span class="text-sm">🔐</span>
+              <span>Hospital Sign In</span>
+            </button>
+            <button 
+              type="button" 
+              id="tabBtnSignUp" 
+              onclick="setAuthMode('signup')" 
+              class="py-2.5 rounded-xl transition-all text-[#668580] hover:text-[#17554E] flex items-center justify-center gap-2"
+            >
+              <span class="text-sm">📝</span>
+              <span>Register Staff</span>
+            </button>
+          </div>
+
+          <!-- Alert Notices -->
+          <div id="loginError" class="hidden mb-5 p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-xs font-semibold flex items-center gap-2.5 shadow-sm">
+            <span class="text-base">⚠️</span>
+            <span id="loginErrorMsg">Please check your details</span>
+          </div>
+
+          <div id="loginSuccess" class="hidden mb-5 p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-xs font-semibold flex items-center gap-2.5 shadow-sm">
+            <span class="text-base">✅</span>
+            <span id="loginSuccessMsg">Account created successfully!</span>
+          </div>
+
+          <!-- A. SIGN IN FORM -->
+          <form id="signInForm" onsubmit="handleManualLogin(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-extrabold text-[#1D3633] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <span>🏥 Select Hospital Branch</span>
+                <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <select id="loginHospitalSelect" class="w-full bg-white border border-[#CCE4DF] hover:border-[#267B73] rounded-xl px-4 py-3 text-sm font-bold text-[#1D3633] focus:outline-none focus:ring-2 focus:ring-[#267B73] focus:border-[#267B73] transition-all cursor-pointer appearance-none pr-10 shadow-sm">
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#267B73]">
+                  ▼
+                </div>
+              </div>
+              <span class="block text-[11px] text-[#668580] mt-1 font-medium">Outpatient data & tokens will be isolated to this facility.</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-extrabold text-[#1D3633] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <span>👤 Staff Email / Phone</span>
+                <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <input 
+                  type="email" 
+                  id="loginEmail" 
+                  required 
+                  placeholder="e.g. reception@arkcare.in" 
+                  value="reception@arkcare.in"
+                  class="w-full bg-white border border-[#CCE4DF] hover:border-[#267B73] rounded-xl px-4 py-3 text-sm text-[#1D3633] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#267B73] focus:border-[#267B73] transition-all font-medium shadow-sm"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="block text-xs font-extrabold text-[#1D3633] uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🔑 Password</span>
+                  <span class="text-rose-500">*</span>
+                </label>
+                <span class="text-[11px] text-[#267B73] bg-[#EEF6F4] px-2 py-0.5 rounded font-mono font-bold">Demo: admin123</span>
+              </div>
+              <input 
+                type="password" 
+                id="loginPassword" 
+                required 
+                value="admin123"
+                class="w-full bg-white border border-[#CCE4DF] hover:border-[#267B73] rounded-xl px-4 py-3 text-sm text-[#1D3633] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#267B73] focus:border-[#267B73] transition-all font-mono shadow-sm"
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              class="w-full bg-gradient-to-r from-[#17554E] via-[#267B73] to-[#30897F] hover:from-[#13453F] hover:to-[#226860] text-white font-extrabold py-3.5 rounded-xl text-sm shadow-lg shadow-[#267B73]/25 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2 mt-4"
+            >
+              <span>🔐 Sign In to Console</span>
+              <span class="text-teal-200">→</span>
+            </button>
+
+            <div class="text-center pt-3 border-t border-[#E2ECE9] mt-5">
+              <p class="text-xs text-[#668580] font-medium">
+                Need a new hospital staff login?
+                <button type="button" onclick="setAuthMode('signup')" class="text-[#267B73] font-bold hover:underline ml-1 underline-offset-2">Register staff account</button>
+              </p>
+            </div>
+          </form>
+
+          <!-- B. SIGN UP FORM -->
+          <form id="signUpForm" onsubmit="handleManualSignUp(event)" class="space-y-4 hidden">
+            <div>
+              <label class="block text-xs font-extrabold text-[#1D3633] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <span>🏥 Assigned Hospital Facility</span>
+                <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <select id="signupHospitalSelect" class="w-full bg-white border border-[#CCE4DF] hover:border-[#267B73] rounded-xl px-4 py-2.5 text-sm font-bold text-[#1D3633] focus:outline-none focus:ring-2 focus:ring-[#267B73] focus:border-[#267B73] transition-all cursor-pointer appearance-none pr-10 shadow-sm">
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#267B73]">
+                  ▼
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-extrabold text-[#1D3633] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <span>Staff Full Name</span>
+                <span class="text-rose-500">*</span>
+              </label>
+              <input 
+                type="text" 
+                id="signupFullName" 
+                required 
+                placeholder="e.g. Dr. K. Anandh / Priya M." 
+                class="w-full bg-white border border-[#CCE4DF] hover:border-[#267B73] rounded-xl px-4 py-2.5 text-sm text-[#1D3633] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#267B73] transition-all font-medium shadow-sm"
+              />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label class="block text-xs font-extrabold text-[#1D3633] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <span>Designation / Role</span>
+                  <span class="text-rose-500">*</span>
+                </label>
+                <select id="signupRole" class="w-full bg-white border border-[#CCE4DF] rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1D3633] focus:outline-none focus:ring-2 focus:ring-[#267B73] shadow-sm">
+                  <option value="Hospital Administrator">Hospital Administrator</option>
+                  <option value="OPD Doctor">OPD Doctor</option>
+                  <option value="Reception Staff" selected>Reception Staff</option>
+                  <option value="Triage Nurse">Triage Nurse</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-extrabold text-[#1D3633] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <span>Mobile Phone</span>
+                  <span class="text-rose-500">*</span>
+                </label>
+                <input 
+                  type="tel" 
+                  id="signupPhone" 
+                  required 
+                  placeholder="+91 98420 12345" 
+                  class="w-full bg-white border border-[#CCE4DF] rounded-xl px-3.5 py-2.5 text-xs text-[#1D3633] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#267B73] font-mono shadow-sm"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-extrabold text-[#1D3633] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <span>Official Work Email</span>
+                <span class="text-rose-500">*</span>
+              </label>
+              <input 
+                type="email" 
+                id="signupEmail" 
+                required 
+                placeholder="name@hospital.org" 
+                class="w-full bg-white border border-[#CCE4DF] rounded-xl px-4 py-2.5 text-sm text-[#1D3633] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#267B73] transition-all font-medium shadow-sm"
+              />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label class="block text-xs font-extrabold text-[#1D3633] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <span>Password</span>
+                  <span class="text-rose-500">*</span>
+                </label>
+                <input 
+                  type="password" 
+                  id="signupPassword" 
+                  required 
+                  minlength="6"
+                  placeholder="Min 6 characters" 
+                  class="w-full bg-white border border-[#CCE4DF] rounded-xl px-3.5 py-2.5 text-xs text-[#1D3633] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#267B73] font-mono shadow-sm"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-extrabold text-[#1D3633] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <span>Confirm Password</span>
+                  <span class="text-rose-500">*</span>
+                </label>
+                <input 
+                  type="password" 
+                  id="signupConfirmPassword" 
+                  required 
+                  minlength="6"
+                  placeholder="Re-enter password" 
+                  class="w-full bg-white border border-[#CCE4DF] rounded-xl px-3.5 py-2.5 text-xs text-[#1D3633] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#267B73] font-mono shadow-sm"
+                />
+              </div>
+            </div>
+
+            <button 
+              type="submit" 
+              class="w-full bg-gradient-to-r from-[#17554E] via-[#267B73] to-[#30897F] hover:from-[#13453F] hover:to-[#226860] text-white font-extrabold py-3.5 rounded-xl text-sm shadow-lg shadow-[#267B73]/25 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2 mt-4"
+            >
+              <span>📝 Complete Registration & Access Console</span>
+              <span class="text-teal-200">→</span>
+            </button>
+
+            <div class="text-center pt-3 border-t border-[#E2ECE9] mt-5">
+              <p class="text-xs text-[#668580] font-medium">
+                Already registered with this hospital?
+                <button type="button" onclick="setAuthMode('signin')" class="text-[#267B73] font-bold hover:underline ml-1 underline-offset-2">Sign in here</button>
+              </p>
+            </div>
+          </form>
+
+        </div>
+
+        <!-- Footer Notice -->
+        <div class="bg-[#EEF6F4] px-6 py-3 border-t border-[#CCE4DF] text-center">
+          <p class="text-[11px] text-[#668580] font-medium flex items-center justify-center gap-1.5">
+            <span>🔒</span>
+            <span>Secured with ArkCare OPD End-to-End Hospital Protocol</span>
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. MAIN ADMIN PORTAL (POST-LOGIN) -->
+  <div id="mainApp" class="flex-1 flex flex-col hidden">
+    <!-- Top Navbar -->
+    <header class="bg-slate-900 text-white shadow-md border-b border-slate-800 sticky top-0 z-30">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        
+        <!-- Left: Brand + Dropdown Menu for Hospitals -->
+        <div class="flex items-center gap-3 sm:gap-4">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center font-black text-xl shadow-md shadow-emerald-500/20 text-slate-950 shrink-0">
+            AC
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold text-lg tracking-tight text-white hidden sm:inline">ArkCare</span>
+              <div class="relative inline-block">
+                <select 
+                  id="navHospitalSelect" 
+                  onchange="switchHospital(this.value)"
+                  class="bg-slate-800 hover:bg-slate-700/80 text-white font-bold text-xs sm:text-sm py-1.5 pl-3 pr-8 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer appearance-none transition-all shadow-inner"
+                >
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-emerald-400 text-xs">
+                  ▼
+                </div>
+              </div>
+            </div>
+            <p id="navHospitalSub" class="text-xs text-slate-400 font-medium hidden md:block">OPD Outpatient Synchronization</p>
+          </div>
+        </div>
+
+        <!-- Right: Live Cloud Sync Status, Language Switcher & Profile -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          
+          <!-- Cloud Sync Pill -->
+          <div class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs">
+            <span id="syncIndicator" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="syncStatusText" class="text-[11px] font-semibold text-slate-300">Live Sync</span>
+            <button onclick="manualSyncTokens()" title="Refresh now" class="ml-1 text-slate-400 hover:text-emerald-400 text-xs">
+              🔄
+            </button>
+          </div>
+
+          <button id="langBtn" onclick="toggleLanguage()" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all border bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700">
+            தமிழ் (TA)
+          </button>
+
+          <div class="flex items-center gap-2 pl-2 border-l border-slate-700 text-xs">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center font-bold text-emerald-400">
+                <span id="userAvatar">RC</span>
+              </div>
+              <div class="hidden sm:block text-left">
+                <div id="loggedUserName" class="font-bold text-slate-200">Reception Staff</div>
+                <div id="loggedUserEmail" class="text-[10px] text-slate-400 font-mono">staff@arkcare.in</div>
+              </div>
+            </div>
+            <button onclick="handleLogout()" class="ml-1 sm:ml-2 px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-lg text-xs font-bold transition-all" title="Sign out">
+              Exit
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="bg-white border-b border-slate-200 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex gap-1 overflow-x-auto">
+        <button onclick="switchTab('queue')" id="tab-queue" class="tab-btn py-3.5 px-4 font-bold text-sm flex items-center gap-2 border-b-2 border-emerald-600 text-emerald-700 bg-emerald-50/50">
+          ⚡ Live OPD Queue Room
+        </button>
+        <button onclick="switchTab('walkin')" id="tab-walkin" class="tab-btn py-3.5 px-4 font-bold text-sm flex items-center gap-2 border-b-2 border-transparent text-slate-600 hover:text-slate-900">
+          🎟️ Issue Walk-In Token
+        </button>
+        <button onclick="switchTab('doctors')" id="tab-doctors" class="tab-btn py-3.5 px-4 font-bold text-sm flex items-center gap-2 border-b-2 border-transparent text-slate-600 hover:text-slate-900">
+          👨🏻‍⚕️ Doctors & OPD Rooms
+        </button>
+        <button onclick="switchTab('reports')" id="tab-reports" class="tab-btn py-3.5 px-4 font-bold text-sm flex items-center gap-2 border-b-2 border-transparent text-slate-600 hover:text-slate-900">
+          📊 Analytics & Invoices
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+      <!-- 1. LIVE OPD QUEUE ROOM -->
+      <div id="view-queue" class="space-y-6">
+        <!-- Doctor Selector Chips -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-2 overflow-x-auto pb-1 max-w-full" id="doctorChipsContainer">
+          </div>
+
+          <button onclick="openAddDoctorModal()" class="inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 px-3 py-2 rounded-lg transition-colors">
+            ➕ Add OPD Doctor
+          </button>
+        </div>
+
+        <!-- Live Queue HUD (Focused: Doctor Card, Serving Cabin, Queue Metrics & Auto-Alert Indicator) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Doctor Profile Card -->
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+            <div class="flex items-start gap-3">
+              <div id="hudDocAvatar" class="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center text-2xl shadow-inner">
+                👨🏻‍⚕️
+              </div>
+              <div>
+                <h3 id="hudDocName" class="font-bold text-slate-900 leading-snug">Dr. Rajesh Sundaram</h3>
+                <p id="hudDocSpecialty" class="text-xs font-medium text-emerald-700 bg-emerald-50 inline-block px-1.5 py-0.5 rounded mt-0.5">General Medicine</p>
+                <p id="hudDocQual" class="text-xs text-slate-500 mt-1">MBBS, MD</p>
+                <div id="hudDocRoom" class="flex items-center gap-1.5 mt-2 text-xs text-slate-600 font-semibold">
+                  📍 Room 104 (Ground Floor)
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-slate-100 grid grid-cols-2 gap-2 text-center text-xs">
+              <div class="bg-slate-50 p-2 rounded-lg">
+                <span class="block text-slate-400 font-semibold text-[10px] uppercase">Daily Cap</span>
+                <span id="hudDocCap" class="font-bold text-slate-800 text-sm">35</span>
+              </div>
+              <div class="bg-slate-50 p-2 rounded-lg">
+                <span class="block text-slate-400 font-semibold text-[10px] uppercase">Avg Time</span>
+                <span id="hudDocTime" class="font-bold text-slate-800 text-sm">4 min</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Serving Now HUD (Consultation Cabin with Complete & Cancel Actions) -->
+          <div class="bg-gradient-to-br from-emerald-600 to-teal-700 text-white p-5 rounded-xl shadow-md flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-emerald-200 flex items-center gap-1">
+                  ▶ CURRENTLY CONSULTING (SERVING)
+                </span>
+                <span class="text-[10px] bg-emerald-900/40 text-emerald-100 px-2 py-0.5 rounded-full border border-emerald-400/30 font-semibold">
+                  Inside Cabin
+                </span>
+              </div>
+              <div id="servingContainer" class="mt-4">
+              </div>
+            </div>
+            <div id="servingActionBtn" class="mt-4 pt-3 border-t border-emerald-500/30">
+            </div>
+          </div>
+
+          <!-- Queue Counters & Auto-Alert Protocol HUD -->
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Queue Metrics</span>
+                <span class="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Auto-Alert (Next 2)
+                </span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 mt-3">
+                <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                  <div class="text-[10px] font-semibold text-slate-500">Waiting in Queue</div>
+                  <div id="statWaiting" class="text-2xl font-black text-slate-800">0</div>
+                </div>
+                <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                  <div class="text-[10px] font-semibold text-slate-500">Completed</div>
+                  <div id="statCompleted" class="text-2xl font-black text-emerald-600">0</div>
+                </div>
+                <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                  <div class="text-[10px] font-semibold text-slate-500">Total Booked</div>
+                  <div id="statTotal" class="text-xl font-bold text-slate-700">0</div>
+                </div>
+                <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                  <div class="text-[10px] font-semibold text-slate-500">Est. Wait</div>
+                  <div id="statEstWait" class="text-xl font-bold text-amber-600">0m</div>
+                </div>
+              </div>
+            </div>
+            <div class="mt-3 p-2 bg-slate-50 rounded-lg border border-slate-200 text-[11px] text-slate-600 leading-tight">
+              💡 <strong>Smart Notification Protocol:</strong> Completing or cancelling any patient triggers automatic alerts to the <strong>first 2 next waiting patients</strong> to arrive at the door.
+            </div>
+          </div>
+        </div>
+
+        <!-- Token Ledger Table (Complete, Cancel, and Manual Alert) -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <h4 class="font-extrabold text-slate-900">Patient Token Ledger</h4>
+              <span id="tokenBadgeCount" class="text-xs bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full">
+                0 tokens
+              </span>
+            </div>
+
+            <div class="relative w-full sm:w-72">
+              <input
+                type="text"
+                id="searchInput"
+                oninput="renderLedger()"
+                placeholder="Search by token, patient, or phone..."
+                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
+                <tr>
+                  <th class="py-3 px-4">Token #</th>
+                  <th class="py-3 px-4">Patient Information</th>
+                  <th class="py-3 px-4">Phone</th>
+                  <th class="py-3 px-4">Queue Status</th>
+                  <th class="py-3 px-4">Position</th>
+                  <th class="py-3 px-4">Origin</th>
+                  <th class="py-3 px-4 text-right">Actions & Alerts</th>
+                </tr>
+              </thead>
+              <tbody id="ledgerTableBody" class="divide-y divide-slate-100 font-medium">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. ISSUE WALK-IN TOKEN VIEW -->
+      <div id="view-walkin" class="hidden max-w-2xl mx-auto">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+          <div class="flex items-center gap-3 border-b border-slate-100 pb-4 mb-5">
+            <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center text-xl">
+              🎟️
+            </div>
+            <div>
+              <h3 class="font-extrabold text-lg text-slate-900">Hospital Walk-In Reception Desk</h3>
+              <p class="text-xs text-slate-500">Issue direct OPD tokens for walk-in arrivals at the selected hospital</p>
+            </div>
+          </div>
+
+          <div id="walkinSuccessMsg" class="hidden mb-5 bg-emerald-50 border border-emerald-300 text-emerald-800 px-4 py-3 rounded-lg text-sm font-semibold">
+          </div>
+
+          <form onsubmit="handleIssueWalkin(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Select Doctor & OPD Room *</label>
+              <select id="walkinDoctorSelect" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              </select>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Patient Full Name *</label>
+                <input type="text" id="walkinName" required placeholder="e.g. Ramesh Kumar" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mobile Number (SMS Updates) *</label>
+                <input type="tel" id="walkinPhone" required placeholder="+91 98421 00000" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Age</label>
+                <input type="number" id="walkinAge" value="32" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Gender</label>
+                <select id="walkinGender" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium">
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+              <button type="button" onclick="switchTab('queue')" class="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-100">
+                Cancel
+              </button>
+              <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-lg text-sm shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2">
+                🎟️ Issue Hospital Token
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- 3. DOCTORS & OPD ROOMS DIRECTORY -->
+      <div id="view-doctors" class="space-y-6 hidden">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-extrabold text-lg text-slate-900">Hospital Medical Staff & OPD Directory</h3>
+            <p class="text-xs text-slate-500">Doctors practicing at this specific hospital branch</p>
+          </div>
+          <button onclick="openAddDoctorModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs shadow transition-all flex items-center gap-1.5">
+            ➕ Add Doctor
+          </button>
+        </div>
+
+        <div id="doctorDirectoryGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        </div>
+      </div>
+
+      <!-- 4. ANALYTICS & INVOICES -->
+      <div id="view-reports" class="space-y-6 hidden">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <div class="text-xs font-bold text-slate-400 uppercase">Hospital OPD Tokens</div>
+            <div id="repHospTokens" class="text-3xl font-extrabold text-slate-900 mt-2">0</div>
+            <div class="text-xs text-emerald-600 font-medium mt-1">Booked for this facility</div>
+          </div>
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <div class="text-xs font-bold text-slate-400 uppercase">Hospital Collections (INR)</div>
+            <div id="repHospRevenue" class="text-3xl font-extrabold text-emerald-700 mt-2">₹0</div>
+            <div class="text-xs text-slate-500 font-medium mt-1">₹10 token booking fee</div>
+          </div>
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <div class="text-xs font-bold text-slate-400 uppercase">Consultations Served</div>
+            <div id="repHospServed" class="text-3xl font-extrabold text-teal-700 mt-2">0</div>
+            <div class="text-xs text-slate-500 font-medium mt-1">Patients treated today</div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <h4 class="font-extrabold text-slate-900 mb-3">Facility Digital Receipts & Invoices</h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200">
+                <tr>
+                  <th class="py-2.5 px-3">Invoice Ref</th>
+                  <th class="py-2.5 px-3">Token</th>
+                  <th class="py-2.5 px-3">Patient</th>
+                  <th class="py-2.5 px-3">Doctor</th>
+                  <th class="py-2.5 px-3">Fee</th>
+                  <th class="py-2.5 px-3">Method</th>
+                  <th class="py-2.5 px-3">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody id="invoiceTableBody" class="divide-y divide-slate-100">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ADD DOCTOR MODAL -->
+  <div id="addDocModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+        <div>
+          <h3 class="font-bold text-slate-900 text-lg">Add OPD Doctor to Hospital</h3>
+          <p id="modalHospitalLabel" class="text-xs text-slate-500">Adding to current facility</p>
+        </div>
+        <button onclick="closeAddDoctorModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+
+      <form onsubmit="handleCreateDoctor(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Doctor Name (English) *</label>
+          <input type="text" id="newDocName" required placeholder="e.g. Dr. Anand Natarajan" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Doctor Name (தமிழ் - Optional)</label>
+          <input type="text" id="newDocNameTa" placeholder="எ.கா. டாக்டர். ஆனந்த் நடராஜன்" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Specialty</label>
+            <input type="text" id="newDocSpecialty" required value="General Medicine" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Token Prefix</label>
+            <input type="text" id="newDocPrefix" required maxlength="4" placeholder="GM" value="OPD" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm uppercase font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Qualifications</label>
+            <input type="text" id="newDocQual" value="MBBS, MD" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Cabin Room</label>
+            <input type="text" id="newDocRoom" value="Room 105" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Daily Token Capacity</label>
+          <input type="number" id="newDocCapacity" value="35" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+          <button type="button" onclick="closeAddDoctorModal()" class="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-100">Cancel</button>
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs shadow">Save Doctor</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Audio Chime Generator -->
+  <script>
+    function playCallingChime() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+        osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.2); // E5
+
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.8);
+      } catch (err) {
+        console.warn('Audio chime skipped:', err);
+      }
+    }
+  </script>
+
+  <!-- Application Logic -->
+  <script>
+    // State
+    let isTamil = false;
+    let selectedHospitalId = 'hosp-001';
+    let selectedDoctorId = 'doc-101';
+    let activeTab = 'queue';
+    let currentUser = null;
+    let syncIntervalId = null;
+
+    // Firebase Cloud Config matching ArkCare-main exactly
+    const FIREBASE_CONFIG = {
+      projectId: 'tokenstar-a37a2',
+      apiKey: 'AIzaSyAwMY-FGB5YWdba_myDX7dRAXoSu7q_aZg'
+    };
+
+    // Hospitals Directory from ArkCare-main
+    const HOSPITALS = [
+      {
+        id: 'hosp-001',
+        name: 'Lotus Hospital & Research Centre',
+        nameTa: 'லோட்டஸ் மருத்துவமனை & ஆராய்ச்சி மையம்',
+        city: 'Erode',
+        cityTa: 'ஈரோடு',
+        area: 'Poondurai Road',
+        address: 'Kollampalayam, Poondurai Main Road, Erode - 638002',
+        phone: '+91 424 228 2828',
+        doctors: [
+          {
+            id: 'doc-101',
+            name: 'Dr. Rajesh Sundaram',
+            nameTa: 'டாக்டர். ராஜேஷ் சுந்தரம்',
+            specialty: 'General Medicine',
+            specialtyTa: 'பொது மருத்துவம்',
+            qualification: 'MBBS, MD (General Medicine)',
+            room: 'Room 104 (Ground Floor)',
+            prefix: 'GM',
+            dailyCapacity: 35,
+            avgConsultMinutes: 4,
+            avatar: '👨🏻‍⚕️'
+          },
+          {
+            id: 'doc-102',
+            name: 'Dr. Priya Sharma',
+            nameTa: 'டாக்டர். பிரியா சர்மா',
+            specialty: 'Cardiology',
+            specialtyTa: 'இதயவியல்',
+            qualification: 'MBBS, MD, DM (Cardiology)',
+            room: 'Room 208 (2nd Floor)',
+            prefix: 'CRD',
+            dailyCapacity: 25,
+            avgConsultMinutes: 6,
+            avatar: '👩🏻‍⚕️'
+          },
+          {
+            id: 'doc-103',
+            name: 'Dr. K. Vignesh',
+            nameTa: 'டாக்டர். கே. விக்னேஷ்',
+            specialty: 'Pediatrics',
+            specialtyTa: 'குழந்தைகள் நலம்',
+            qualification: 'MBBS, DCH, DNB (Pediatrics)',
+            room: 'Room 112 (Pediatric Wing)',
+            prefix: 'PED',
+            dailyCapacity: 30,
+            avgConsultMinutes: 5,
+            avatar: '👨🏽‍⚕️'
+          }
+        ]
+      },
+      {
+        id: 'hosp-002',
+        name: 'Sudha Hospital',
+        nameTa: 'சுதா மருத்துவமனை',
+        city: 'Erode',
+        cityTa: 'ஈரோடு',
+        area: 'Perundurai Road',
+        address: 'Near Collectorate, Perundurai Road, Erode - 638011',
+        phone: '+91 424 222 5555',
+        doctors: [
+          {
+            id: 'doc-201',
+            name: 'Dr. Sarah Mathews',
+            nameTa: 'டாக்டர். சாரா மேத்யூஸ்',
+            specialty: 'Orthopaedics',
+            specialtyTa: 'எலும்பியல்',
+            qualification: 'MBBS, MS (Ortho)',
+            room: 'Room 101',
+            prefix: 'ORT',
+            dailyCapacity: 30,
+            avgConsultMinutes: 5,
+            avatar: '👩🏽‍⚕️'
+          },
+          {
+            id: 'doc-202',
+            name: 'Dr. Suresh Kumar',
+            nameTa: 'டாக்டர். சுரேஷ் குமார்',
+            specialty: 'Dermatology',
+            specialtyTa: 'தோல் மருத்துவம்',
+            qualification: 'MBBS, MD (Dermatology)',
+            room: 'Room 105',
+            prefix: 'DER',
+            dailyCapacity: 30,
+            avgConsultMinutes: 4,
+            avatar: '👨🏻‍⚕️'
+          }
+        ]
+      },
+      {
+        id: 'hosp-003',
+        name: 'Maruthi Medical Center (MMCH)',
+        nameTa: 'மாருதி மருத்துவ மையம் (MMCH)',
+        city: 'Erode',
+        cityTa: 'ஈரோடு',
+        area: 'Perundurai Road',
+        address: '564 Perundurai Road, Erode - 638011',
+        phone: '+91 424 226 4949',
+        doctors: [
+          {
+            id: 'doc-301',
+            name: 'Dr. R. Meenakshisundaram',
+            nameTa: 'டாக்டர். ஆர். மீனாட்சிசுந்தரம்',
+            specialty: 'Cardiology',
+            specialtyTa: 'இதயவியல்',
+            qualification: 'MD, DM (Cardiology), FACC',
+            room: 'Cardiac OPD Room 3',
+            prefix: 'CAR',
+            dailyCapacity: 30,
+            avgConsultMinutes: 6,
+            avatar: '👨🏽‍⚕️'
+          }
+        ]
+      },
+      {
+        id: 'hosp-004',
+        name: 'Care 24 Hospital',
+        nameTa: 'கேர் 24 மருத்துவமனை',
+        city: 'Erode',
+        cityTa: 'ஈரோடு',
+        area: 'Brough Road',
+        address: 'Brough Road, Erode - 638001',
+        phone: '+91 424 225 1222',
+        doctors: [
+          {
+            id: 'doc-401',
+            name: 'Dr. C. Mohan',
+            nameTa: 'டாக்டர். சி. மோகன்',
+            specialty: 'General Medicine',
+            specialtyTa: 'பொது மருத்துவம்',
+            qualification: 'MBBS, MD',
+            room: 'Emergency OPD 1',
+            prefix: 'C24',
+            dailyCapacity: 40,
+            avgConsultMinutes: 4,
+            avatar: '👨🏻‍⚕️'
+          }
+        ]
+      }
+    ];
+
+    // Master in-memory token ledger
+    let BOOKINGS = [];
+
+    // Helper functions to extract Firestore types
+    function extractString(field) {
+      if (!field) return '';
+      if (typeof field === 'string') return field;
+      return field.stringValue || '';
+    }
+
+    function extractInt(field) {
+      if (!field) return 0;
+      if (typeof field === 'number') return field;
+      if (field.integerValue) return parseInt(field.integerValue, 10);
+      if (field.doubleValue) return Math.round(field.doubleValue);
+      return 0;
+    }
+
+    function extractDouble(field) {
+      if (!field) return 0.0;
+      if (typeof field === 'number') return field;
+      if (field.doubleValue !== undefined) return field.doubleValue;
+      if (field.integerValue !== undefined) return parseFloat(field.integerValue);
+      return 0.0;
+    }
+
+    // ── LIVE CLOUD FIRESTORE FETCHER ──────────────────────────────────
+    async function fetchCloudTokens() {
+      const syncStatusText = document.getElementById('syncStatusText');
+      const syncIndicator = document.getElementById('syncIndicator');
+
+      try {
+        if (syncIndicator) syncIndicator.className = 'w-2 h-2 rounded-full bg-amber-400 animate-spin';
+        if (syncStatusText) syncStatusText.innerText = 'Syncing...';
+
+        const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/tokens?key=${FIREBASE_CONFIG.apiKey}&pageSize=100`;
+        const res = await fetch(url);
+        
+        if (!res.ok) throw new Error(`Cloud returned HTTP ${res.status}`);
+
+        const data = await res.json();
+        const documents = data.documents || [];
+
+        const cloudTokens = documents.map(doc => {
+          const f = doc.fields || {};
+          const rawId = doc.name.split('/').pop();
+          const rawStatus = (extractString(f.status) || 'CONFIRMED').toUpperCase();
+          
+          let normalizedStatus = 'CONFIRMED';
+          if (rawStatus === 'SERVING') normalizedStatus = 'SERVING';
+          else if (rawStatus === 'COMPLETED' || rawStatus === 'DONE') normalizedStatus = 'COMPLETED';
+          else if (rawStatus === 'CANCELLED') normalizedStatus = 'CANCELLED';
+          else if (rawStatus === 'NO_SHOW') normalizedStatus = 'NO_SHOW';
+          else if (rawStatus === 'CALLED' || rawStatus === 'WAITING' || rawStatus === 'CONFIRMED') normalizedStatus = 'CONFIRMED';
+
+          return {
+            id: extractString(f.id) || rawId,
+            displayToken: extractString(f.tokenDisplay) || extractString(f.displayToken) || 'OPD-001',
+            sequenceNumber: extractInt(f.tokenNumber) || extractInt(f.sequenceNumber) || 1,
+            hospitalId: extractString(f.hospitalId) || 'hosp-001',
+            hospitalName: extractString(f.hospitalName) || 'Hospital',
+            doctorId: extractString(f.doctorId) || 'doc-101',
+            doctorName: extractString(f.doctorName) || 'Doctor',
+            patientName: extractString(f.patientName) || 'Online Patient',
+            patientPhone: extractString(f.patientPhone) || '+91 90000 00000',
+            patientAge: extractInt(f.patientAge) || 25,
+            patientGender: extractString(f.patientGender) || 'Unspecified',
+            status: normalizedStatus,
+            paymentStatus: extractString(f.paymentStatus) || 'PAID',
+            paymentMethod: extractString(f.paymentMethod) || 'UPI (Mobile App)',
+            paymentReference: extractString(f.paymentReference) || 'SIM-PAY-TS',
+            feeAmount: extractDouble(f.feeAmount) || 10.0,
+            source: extractString(f.source) || 'ArkCare Mobile App',
+            createdAt: extractString(f.createdAt) || new Date().toISOString()
+          };
+        });
+
+        // Merge: preserve local walk-ins
+        const localWalkIns = BOOKINGS.filter(b => b.paymentReference && b.paymentReference.startsWith('REC-'));
+        const combined = [...cloudTokens];
+
+        localWalkIns.forEach(walkin => {
+          if (!combined.some(c => c.id === walkin.id)) {
+            combined.push(walkin);
+          }
+        });
+
+        // Sort sequence order
+        combined.sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+        BOOKINGS = combined;
+
+        if (syncIndicator) syncIndicator.className = 'w-2 h-2 rounded-full bg-emerald-400';
+        if (syncStatusText) syncStatusText.innerText = `Synced (${BOOKINGS.length})`;
+
+        renderAll();
+      } catch (err) {
+        console.warn('[ArkCare Cloud Sync] Fallback to existing tokens:', err.message);
+        if (syncIndicator) syncIndicator.className = 'w-2 h-2 rounded-full bg-slate-400';
+        if (syncStatusText) syncStatusText.innerText = 'Offline Mode';
+      }
+    }
+
+    function manualSyncTokens() {
+      fetchCloudTokens();
+      showToast('Live Sync', 'Refreshing tokens from ArkCare Cloud Firestore...', 'success');
+    }
+
+    // Context Helpers
+    function getCurrentHospital() {
+      return HOSPITALS.find(h => h.id === selectedHospitalId) || HOSPITALS[0];
+    }
+
+    function getCurrentDoctor() {
+      const h = getCurrentHospital();
+      return h.doctors.find(d => d.id === selectedDoctorId) || h.doctors[0];
+    }
+
+    function getHospitalBookings() {
+      return BOOKINGS.filter(b => b.hospitalId === selectedHospitalId);
+    }
+
+    function getDoctorBookings() {
+      return BOOKINGS.filter(b => b.hospitalId === selectedHospitalId && b.doctorId === selectedDoctorId);
+    }
+
+    function getWaitingQueue() {
+      return getDoctorBookings().filter(b => b.status === 'CONFIRMED');
+    }
+
+    // Toast Notification System
+    function showToast(title, message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto bg-slate-900 text-white rounded-xl shadow-2xl p-4 border flex items-start gap-3 animate-slide-down ${
+        type === 'success' ? 'border-emerald-500/50' : 'border-amber-500/50'
+      }`;
+      toast.innerHTML = `
+        <div class="w-8 h-8 rounded-lg ${type === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'} flex items-center justify-center font-bold text-base shrink-0">
+          ${type === 'success' ? '📲' : '🔔'}
+        </div>
+        <div class="flex-1">
+          <div class="font-bold text-xs uppercase tracking-wider ${type === 'success' ? 'text-emerald-400' : 'text-amber-400'}">${title}</div>
+          <div class="text-xs text-slate-200 mt-0.5 leading-snug">${message}</div>
+        </div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 4500);
+    }
+
+    // ── SMART AUTOMATIC ALERT PROTOCOL (First 2 Next Patients) ────────
+    function dispatchAutoAlertToNextTwo(triggerEvent, triggeredToken) {
+      const h = getCurrentHospital();
+      const doc = getCurrentDoctor();
+      const waiting = getWaitingQueue();
+
+      if (waiting.length === 0) {
+        showToast(
+          `Consultation ${triggerEvent}`,
+          `Token ${triggeredToken.displayToken} was ${triggerEvent.toLowerCase()}. Queue is now clear for ${doc.name}!`,
+          'info'
+        );
+        return;
+      }
+
+      playCallingChime();
+
+      // Take first 2 waiting patients
+      const nextPatients = waiting.slice(0, 2);
+
+      const title = `Auto-Alert Sent (${triggerEvent})`;
+      const sub = `Triggered by ${triggerEvent} of Token ${triggeredToken.displayToken}`;
+      document.getElementById('modalAlertTitle').innerText = title;
+      document.getElementById('modalAlertSub').innerText = sub;
+      document.getElementById('modalAlertBadge').innerText = `${nextPatients.length} NEXT PATIENT(S) NOTIFIED`;
+
+      const container = document.getElementById('modalAlertCardsContainer');
+      container.innerHTML = nextPatients.map((p, index) => {
+        const isNextImmediate = index === 0;
+        const msg = isTamil
+          ? `🔔 <strong>ஆர்க் கேர் எச்சரிக்கை:</strong> அன்பார்ந்த ${p.patientName}, உங்கள் டோக்கன் எண் <strong>${p.displayToken}</strong>! முந்தைய நோயாளி முடிந்துவிட்டார். தயவுசெய்து ${doc.nameTa || doc.name} அவர்களின் அறைக்கு (${doc.room}) இப்போதே அருகில் வரவும்.`
+          : `🔔 <strong>ArkCare Alert:</strong> Dear ${p.patientName}, your token <strong>${p.displayToken}</strong> is ${isNextImmediate ? 'NEXT IN LINE' : '2nd in queue'}! Previous patient visit ended. Please proceed to ${doc.name} (${doc.room}) now.`;
+
+        return `
+          <div class="bg-slate-900 text-slate-100 rounded-xl p-3.5 border ${isNextImmediate ? 'border-emerald-500' : 'border-slate-800'}">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2 text-[11px]">
+              <div class="flex items-center gap-1.5">
+                <span class="w-4 h-4 rounded bg-emerald-500 text-slate-950 font-black text-[9px] flex items-center justify-center">AC</span>
+                <span class="font-bold text-white">${p.displayToken} • ${p.patientName}</span>
+              </div>
+              <span class="font-mono text-emerald-400 font-bold">${isNextImmediate ? '▶ NEXT' : '#2 IN QUEUE'}</span>
+            </div>
+            <div class="text-xs text-slate-200 leading-relaxed font-sans">${msg}</div>
+            <div class="mt-2 pt-2 border-t border-slate-800/80 text-[10px] text-slate-400 font-mono flex items-center justify-between">
+              <span>Recipient: ${p.patientPhone}</span>
+              <span class="text-emerald-400 font-bold">SMS & Push Sent</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('patientAlertModal').classList.remove('hidden');
+
+      const names = nextPatients.map(p => `${p.displayToken} (${p.patientName})`).join(' and ');
+      showToast(
+        'Auto Alert Sent to Next Patients',
+        `Dispatched immediate alerts to ${names} to report at door.`,
+        'success'
+      );
+    }
+
+    // ── MANUAL ALERT BUTTON HANDLER ──────────────────────────────────
+    function triggerManualAlert(tokenId) {
+      const token = BOOKINGS.find(b => b.id === tokenId);
+      if (!token) return;
+
+      const h = getCurrentHospital();
+      const doc = getCurrentDoctor();
+
+      playCallingChime();
+
+      document.getElementById('modalAlertTitle').innerText = 'Manual Patient Alert Dispatched';
+      document.getElementById('modalAlertSub').innerText = `Direct notification sent by staff`;
+      document.getElementById('modalAlertBadge').innerText = `PAGED VIA SMS & PUSH`;
+
+      const msg = isTamil
+        ? `🔔 <strong>ஆர்க் கேர் நேரடி அழைப்பு:</strong> அன்பார்ந்த ${token.patientName}, உங்களின் டோக்கன் எண் <strong>${token.displayToken}</strong> ${doc.nameTa || doc.name} (${doc.room})-ல் பரிசோதனைக்காக அழைக்கப்படுகிறது. உடனடியாக வரவும்!`
+        : `🔔 <strong>ArkCare Direct Alert:</strong> Dear ${token.patientName}, your token <strong>${token.displayToken}</strong> has been paged by staff for ${doc.name} (${doc.room}). Please report to the consultation room!`;
+
+      const container = document.getElementById('modalAlertCardsContainer');
+      container.innerHTML = `
+        <div class="bg-slate-900 text-slate-100 rounded-xl p-4 border border-emerald-500">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2 text-[11px]">
+            <div class="flex items-center gap-1.5">
+              <span class="w-4 h-4 rounded bg-emerald-500 text-slate-950 font-black text-[9px] flex items-center justify-center">AC</span>
+              <span class="font-bold text-white">${token.displayToken} • ${token.patientName}</span>
+            </div>
+            <span class="font-mono text-emerald-400 font-bold">MANUAL PAGING</span>
+          </div>
+          <div class="text-xs text-slate-200 leading-relaxed font-sans">${msg}</div>
+          <div class="mt-2 pt-2 border-t border-slate-800 text-[10px] text-slate-400 font-mono flex items-center justify-between">
+            <span>Mobile: ${token.patientPhone}</span>
+            <span class="text-emerald-400 font-bold">Delivered</span>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('patientAlertModal').classList.remove('hidden');
+
+      showToast(
+        'Patient Alert Sent',
+        `Paging notification sent to ${token.patientName} (${token.patientPhone}) for token ${token.displayToken}`,
+        'success'
+      );
+    }
+
+    function closePatientAlertModal() {
+      document.getElementById('patientAlertModal').classList.add('hidden');
+    }
+
+    // Authentication Mode Switcher ('signin' vs 'signup')
+    function setAuthMode(mode) {
+      const signInForm = document.getElementById('signInForm');
+      const signUpForm = document.getElementById('signUpForm');
+      const tabSignIn = document.getElementById('tabBtnSignIn');
+      const tabSignUp = document.getElementById('tabBtnSignUp');
+      const errBox = document.getElementById('loginError');
+      const succBox = document.getElementById('loginSuccess');
+      if (errBox) errBox.classList.add('hidden');
+      if (succBox) succBox.classList.add('hidden');
+
+      if (mode === 'signup') {
+        signInForm.classList.add('hidden');
+        signUpForm.classList.remove('hidden');
+        tabSignUp.className = 'py-2 rounded-lg transition-all text-white bg-slate-900 shadow-sm flex items-center justify-center gap-1.5';
+        tabSignIn.className = 'py-2 rounded-lg transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5';
+      } else {
+        signUpForm.classList.add('hidden');
+        signInForm.classList.remove('hidden');
+        tabSignIn.className = 'py-2 rounded-lg transition-all text-white bg-slate-900 shadow-sm flex items-center justify-center gap-1.5';
+        tabSignUp.className = 'py-2 rounded-lg transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5';
+      }
+    }
+
+    // Login Handler
+    function handleManualLogin(e) {
+      if (e) e.preventDefault();
+      const hospId = document.getElementById('loginHospitalSelect').value;
+      const email = document.getElementById('loginEmail').value.trim();
+      const pwd = document.getElementById('loginPassword').value.trim();
+
+      if (!email || !pwd) {
+        showLoginError('Please enter both Email and Password');
+        return;
+      }
+
+      selectedHospitalId = hospId;
+      const h = getCurrentHospital();
+      if (h.doctors.length > 0) {
+        selectedDoctorId = h.doctors[0].id;
+      }
+
+      currentUser = {
+        name: email.split('@')[0],
+        email,
+        role: 'Reception Staff',
+        hospitalId: h.id,
+        initials: (email.substring(0, 2) || 'RC').toUpperCase()
+      };
+
+      sessionStorage.setItem('arkcare_hosp_admin_session', JSON.stringify(currentUser));
+
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('mainApp').classList.remove('hidden');
+
+      updateNavbar();
+      fetchCloudTokens();
+      startAutoSync();
+    }
+
+    // Staff Sign-Up Handler
+    async function handleManualSignUp(e) {
+      e.preventDefault();
+      const hospId = document.getElementById('signupHospitalSelect').value;
+      const name = document.getElementById('signupFullName').value.trim();
+      const role = document.getElementById('signupRole').value;
+      const phone = document.getElementById('signupPhone').value.trim();
+      const email = document.getElementById('signupEmail').value.trim().toLowerCase();
+      const pwd = document.getElementById('signupPassword').value;
+      const confirmPwd = document.getElementById('signupConfirmPassword').value;
+
+      const errBox = document.getElementById('loginError');
+      const succBox = document.getElementById('loginSuccess');
+      errBox.classList.add('hidden');
+      succBox.classList.add('hidden');
+
+      if (!name || !email || !pwd) {
+        showLoginError('Please fill in all required fields.');
+        return;
+      }
+
+      if (pwd.length < 6) {
+        showLoginError('Password must be at least 6 characters.');
+        return;
+      }
+
+      if (pwd !== confirmPwd) {
+        showLoginError('Passwords do not match. Please re-enter.');
+        return;
+      }
+
+      selectedHospitalId = hospId;
+      const h = getCurrentHospital();
+      if (h.doctors.length > 0) {
+        selectedDoctorId = h.doctors[0].id;
+      }
+
+      const initials = name
+        .split(' ')
+        .map(n => n[0])
+        .filter(Boolean)
+        .slice(0, 2)
+        .join('')
+        .toUpperCase() || 'ST';
+
+      currentUser = {
+        name,
+        email,
+        phone,
+        role,
+        hospitalId: h.id,
+        initials
+      };
+
+      // Persist session locally
+      sessionStorage.setItem('arkcare_hosp_admin_session', JSON.stringify(currentUser));
+
+      // Attempt to register/persist account to Cloud Firestore
+      try {
+        const docId = `staff_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/users/${docId}?key=${FIREBASE_CONFIG.apiKey}`;
+        await fetch(url, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fields: {
+              userId: { stringValue: docId },
+              name: { stringValue: name },
+              email: { stringValue: email },
+              phone: { stringValue: phone },
+              role: { stringValue: role },
+              hospitalId: { stringValue: h.id },
+              hospitalName: { stringValue: h.name },
+              accountType: { stringValue: 'HOSPITAL_STAFF' },
+              createdAt: { stringValue: new Date().toISOString() }
+            }
+          })
+        });
+      } catch (err) {
+        console.warn('[ArkCare Cloud Auth] Staff sync warning:', err.message);
+      }
+
+      // Enter console immediately
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('mainApp').classList.remove('hidden');
+
+      updateNavbar();
+      fetchCloudTokens();
+      startAutoSync();
+      showToast('Account Created', `Welcome to ${h.name}, ${name}! You are logged in as ${role}.`, 'success');
+    }
+
+    function showLoginError(msg) {
+      const errBox = document.getElementById('loginError');
+      const succBox = document.getElementById('loginSuccess');
+      if (succBox) succBox.classList.add('hidden');
+      document.getElementById('loginErrorMsg').innerText = msg;
+      errBox.classList.remove('hidden');
+    }
+
+    function handleLogout() {
+      sessionStorage.removeItem('arkcare_hosp_admin_session');
+      currentUser = null;
+      if (syncIntervalId) clearInterval(syncIntervalId);
+      document.getElementById('mainApp').classList.add('hidden');
+      document.getElementById('loginScreen').classList.remove('hidden');
+    }
+
+    function switchHospital(hospId) {
+      selectedHospitalId = hospId;
+      const h = getCurrentHospital();
+      if (h.doctors.length > 0) {
+        selectedDoctorId = h.doctors[0].id;
+      }
+      if (currentUser) {
+        currentUser.hospitalId = h.id;
+        sessionStorage.setItem('arkcare_hosp_admin_session', JSON.stringify(currentUser));
+      }
+      updateNavbar();
+      renderAll();
+    }
+
+    function updateNavbar() {
+      const h = getCurrentHospital();
+      document.getElementById('navHospitalSelect').value = selectedHospitalId;
+      document.getElementById('navHospitalSub').innerText = `${h.area}, ${h.city} • OPD Queue Console`;
+      document.getElementById('loggedUserName').innerText = currentUser?.role || 'Reception Staff';
+      document.getElementById('loggedUserEmail').innerText = currentUser?.email || 'staff@arkcare.in';
+      document.getElementById('userAvatar').innerText = currentUser?.initials || 'RC';
+    }
+
+    function toggleLanguage() {
+      isTamil = !isTamil;
+      document.getElementById('langBtn').innerText = isTamil ? 'English (EN)' : 'தமிழ் (TA)';
+      populateHospitalDropdowns();
+      updateNavbar();
+      renderAll();
+    }
+
+    // Tab Navigation
+    function switchTab(tabId) {
+      activeTab = tabId;
+      ['queue', 'walkin', 'doctors', 'reports'].forEach(t => {
+        const view = document.getElementById(`view-${t}`);
+        const btn = document.getElementById(`tab-${t}`);
+        if (!view) return;
+        if (t === tabId) {
+          view.classList.remove('hidden');
+          if (btn) btn.className = 'tab-btn py-3.5 px-4 font-bold text-sm flex items-center gap-2 border-b-2 border-emerald-600 text-emerald-700 bg-emerald-50/50';
+        } else {
+          view.classList.add('hidden');
+          if (btn) btn.className = 'tab-btn py-3.5 px-4 font-bold text-sm flex items-center gap-2 border-b-2 border-transparent text-slate-600 hover:text-slate-900';
+        }
+      });
+      if (tabId === 'walkin') populateWalkinDoctors();
+      if (tabId === 'doctors') renderDoctorDirectory();
+      if (tabId === 'reports') renderReports();
+    }
+
+    function selectDoctor(docId) {
+      selectedDoctorId = docId;
+      renderAll();
+    }
+
+    // Master Render Method
+    function renderAll() {
+      renderDoctorChips();
+      renderHUD();
+      renderLedger();
+      if (activeTab === 'walkin') populateWalkinDoctors();
+      if (activeTab === 'doctors') renderDoctorDirectory();
+      if (activeTab === 'reports') renderReports();
+    }
+
+    function renderDoctorChips() {
+      const container = document.getElementById('doctorChipsContainer');
+      const h = getCurrentHospital();
+      container.innerHTML = `
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-400 mr-2">Doctors:</span>
+        ${h.doctors.map(d => {
+          const isSelected = d.id === selectedDoctorId;
+          const waitingCount = BOOKINGS.filter(b => b.hospitalId === h.id && b.doctorId === d.id && b.status === 'CONFIRMED').length;
+          return `
+            <button onclick="selectDoctor('${d.id}')" class="px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+              isSelected ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }">
+              <span>${d.avatar || '👨🏻‍⚕️'}</span>
+              <span>${isTamil && d.nameTa ? d.nameTa : d.name}</span>
+              <span class="text-xs px-1.5 py-0.5 rounded-full ${isSelected ? 'bg-emerald-500 text-slate-950 font-bold' : 'bg-slate-300 text-slate-800'}">
+                ${waitingCount} waiting
+              </span>
+            </button>
+          `;
+        }).join('')}
+      `;
+    }
+
+    function renderHUD() {
+      const doc = getCurrentDoctor();
+      const docBookings = getDoctorBookings();
+
+      // Profile Card
+      document.getElementById('hudDocAvatar').innerText = doc.avatar || '👨🏻‍⚕️';
+      document.getElementById('hudDocName').innerText = isTamil && doc.nameTa ? doc.nameTa : doc.name;
+      document.getElementById('hudDocSpecialty').innerText = isTamil && doc.specialtyTa ? doc.specialtyTa : doc.specialty;
+      document.getElementById('hudDocQual').innerText = doc.qualification;
+      document.getElementById('hudDocRoom').innerText = '📍 ' + doc.room;
+      document.getElementById('hudDocCap').innerText = doc.dailyCapacity;
+      document.getElementById('hudDocTime').innerText = `${doc.avgConsultMinutes} min`;
+
+      // Serving Card
+      const servingToken = docBookings.find(b => b.status === 'SERVING');
+      const servingContainer = document.getElementById('servingContainer');
+      const servingActionBtn = document.getElementById('servingActionBtn');
+
+      if (servingToken) {
+        servingContainer.innerHTML = `
+          <div class="text-4xl font-extrabold tracking-tight">${servingToken.displayToken}</div>
+          <div class="font-bold text-emerald-50 text-base mt-1">${servingToken.patientName}</div>
+          <div class="text-xs text-emerald-200 flex items-center gap-2 mt-1">
+            <span>${servingToken.patientGender}, ${servingToken.patientAge}y</span>
+            <span>•</span>
+            <span>${servingToken.patientPhone}</span>
+          </div>
+        `;
+        servingActionBtn.innerHTML = `
+          <div class="flex gap-2">
+            <button onclick="handleCompleteVisit('${servingToken.id}')" class="flex-1 bg-white text-emerald-800 hover:bg-emerald-50 font-bold py-2 rounded-lg text-xs shadow transition-all flex items-center justify-center gap-1.5">
+              ✅ Complete & Alert Next 2
+            </button>
+            <button onclick="handleCancelVisit('${servingToken.id}')" class="px-3 py-2 bg-emerald-800/80 hover:bg-rose-600 text-white font-bold rounded-lg text-xs transition-all border border-emerald-500/40" title="Cancel this consultation">
+              Cancel
+            </button>
+          </div>
+        `;
+      } else {
+        const nextWaiting = getWaitingQueue()[0];
+        servingContainer.innerHTML = `
+          <div class="text-center py-4 bg-emerald-800/40 rounded-lg border border-emerald-500/20">
+            <p class="text-sm font-semibold text-emerald-100">Doctor Cabin Free</p>
+            <p class="text-xs text-emerald-300 mt-0.5">
+              ${nextWaiting ? `Next ready: ${nextWaiting.displayToken} (${nextWaiting.patientName})` : 'All patients served'}
+            </p>
+          </div>
+        `;
+        servingActionBtn.innerHTML = nextWaiting ? `
+          <button onclick="admitPatient('${nextWaiting.id}')" class="w-full bg-white text-emerald-800 hover:bg-emerald-50 font-bold py-2 rounded-lg text-xs shadow transition-all flex items-center justify-center gap-1.5">
+            ▶ Admit ${nextWaiting.displayToken} into Cabin
+          </button>
+        ` : '';
+      }
+
+      // Queue Metrics
+      const waitingCount = getWaitingQueue().length;
+      const completedCount = docBookings.filter(b => b.status === 'COMPLETED').length;
+      document.getElementById('statWaiting').innerText = waitingCount;
+      document.getElementById('statCompleted').innerText = completedCount;
+      document.getElementById('statTotal').innerText = docBookings.length;
+      document.getElementById('statEstWait').innerText = `${waitingCount * doc.avgConsultMinutes}m`;
+    }
+
+    function renderLedger() {
+      const docBookings = getDoctorBookings();
+      const q = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+
+      const filtered = docBookings.filter(b => {
+        if (!q) return true;
+        return b.displayToken.toLowerCase().includes(q) ||
+               b.patientName.toLowerCase().includes(q) ||
+               b.patientPhone.includes(q);
+      });
+
+      document.getElementById('tokenBadgeCount').innerText = `${filtered.length} tokens`;
+      const tbody = document.getElementById('ledgerTableBody');
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="py-8 text-center text-slate-400">
+              No tokens found for this doctor at ${getCurrentHospital().name} today.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      // Calculate queue positions among CONFIRMED tokens
+      let waitingRank = 0;
+
+      tbody.innerHTML = filtered.map(b => {
+        let badge = 'bg-slate-100 text-slate-700';
+        let positionBadge = '-';
+
+        if (b.status === 'SERVING') {
+          badge = 'bg-emerald-100 text-emerald-800 font-bold border border-emerald-300';
+          positionBadge = '<span class="text-emerald-700 font-extrabold">In Cabin</span>';
+        } else if (b.status === 'CONFIRMED') {
+          waitingRank++;
+          if (waitingRank === 1) {
+            badge = 'bg-amber-100 text-amber-800 border border-amber-300 font-bold';
+            positionBadge = '<span class="bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1.5 py-0.5 rounded text-[10px]">#1 Next in Line</span>';
+          } else if (waitingRank === 2) {
+            badge = 'bg-blue-100 text-blue-800 border border-blue-200';
+            positionBadge = '<span class="bg-blue-50 text-blue-800 border border-blue-200 font-bold px-1.5 py-0.5 rounded text-[10px]">#2 Next</span>';
+          } else {
+            badge = 'bg-slate-100 text-slate-700';
+            positionBadge = `<span class="text-slate-500 font-medium">#${waitingRank} waiting</span>`;
+          }
+        } else if (b.status === 'COMPLETED') {
+          badge = 'bg-slate-100 text-slate-500 line-through';
+          positionBadge = '<span class="text-slate-400">Done</span>';
+        } else if (b.status === 'CANCELLED') {
+          badge = 'bg-rose-50 text-rose-500 line-through';
+          positionBadge = '<span class="text-rose-400">Cancelled</span>';
+        } else if (b.status === 'NO_SHOW') {
+          badge = 'bg-rose-100 text-rose-700';
+          positionBadge = '<span class="text-rose-500">No Show</span>';
+        }
+
+        const originChannel = b.paymentReference && b.paymentReference.startsWith('REC-')
+          ? '<span class="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-bold">🏢 Reception Counter</span>'
+          : '<span class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded font-bold">📱 Patient Mobile App</span>';
+
+        return `
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="py-3 px-4">
+              <span class="font-extrabold text-sm text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                ${b.displayToken}
+              </span>
+            </td>
+            <td class="py-3 px-4">
+              <div class="font-bold text-slate-900">${b.patientName}</div>
+              <div class="text-[11px] text-slate-500">${b.patientGender}, ${b.patientAge} yrs</div>
+            </td>
+            <td class="py-3 px-4 text-slate-600 font-mono text-[11px]">${b.patientPhone}</td>
+            <td class="py-3 px-4">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badge}">
+                ${b.status}
+              </span>
+            </td>
+            <td class="py-3 px-4">
+              ${positionBadge}
+            </td>
+            <td class="py-3 px-4">
+              ${originChannel}
+            </td>
+            <td class="py-3 px-4 text-right">
+              <div class="flex items-center justify-end gap-1.5">
+                ${b.status === 'CONFIRMED' ? `
+                  <button onclick="admitPatient('${b.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2 py-1 rounded text-[11px] shadow-sm flex items-center gap-1" title="Admit directly into doctor room">
+                    ▶ Admit
+                  </button>
+                  <button onclick="triggerManualAlert('${b.id}')" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-2 py-1 rounded text-[11px] shadow-sm flex items-center gap-1" title="Send SMS/Push alert to this patient manually">
+                    🔔 Alert
+                  </button>
+                  <button onclick="handleCancelVisit('${b.id}')" class="bg-slate-100 hover:bg-rose-50 text-rose-600 border border-slate-200 hover:border-rose-300 font-bold px-2 py-1 rounded text-[11px] transition-all" title="Cancel this token and alert next 2 patients">
+                    Cancel
+                  </button>
+                ` : ''}
+
+                ${b.status === 'SERVING' ? `
+                  <button onclick="handleCompleteVisit('${b.id}')" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-2.5 py-1 rounded text-[11px] shadow-sm flex items-center gap-1">
+                    ✅ Complete
+                  </button>
+                  <button onclick="handleCancelVisit('${b.id}')" class="text-rose-500 hover:text-rose-700 font-bold px-1.5 py-1 text-[11px]">
+                    Cancel
+                  </button>
+                ` : ''}
+
+                ${['COMPLETED', 'CANCELLED', 'NO_SHOW'].includes(b.status) ? `
+                  <span class="text-[11px] text-slate-400 font-medium">Archived</span>
+                ` : ''}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ── DOCTOR QUEUE ACTIONS ──────────────────────────────────────────
+
+    // 1. Admit patient directly into consultation cabin
+    function admitPatient(id) {
+      BOOKINGS = BOOKINGS.map(b => {
+        if (b.id === id) return { ...b, status: 'SERVING' };
+        // If another was serving, finish or leave as is
+        return b;
+      });
+      renderAll();
+      updateTokenStatusInCloud(id, 'SERVING');
+    }
+
+    // 2. Complete Visit -> Automatically alerts the FIRST 2 next waiting patients!
+    function handleCompleteVisit(id) {
+      const completedToken = BOOKINGS.find(b => b.id === id);
+      if (!completedToken) return;
+
+      BOOKINGS = BOOKINGS.map(b => b.id === id ? { ...b, status: 'COMPLETED' } : b);
+      renderAll();
+      updateTokenStatusInCloud(id, 'COMPLETED');
+
+      // Trigger automatic alert to next 2 patients in queue!
+      dispatchAutoAlertToNextTwo('COMPLETED', completedToken);
+    }
+
+    // 3. Cancel Visit -> Also automatically alerts the FIRST 2 next waiting patients!
+    function handleCancelVisit(id) {
+      const cancelledToken = BOOKINGS.find(b => b.id === id);
+      if (!cancelledToken) return;
+
+      if (confirm(`Cancel token ${cancelledToken.displayToken} (${cancelledToken.patientName}) and automatically alert the next 2 patients?`)) {
+        BOOKINGS = BOOKINGS.map(b => b.id === id ? { ...b, status: 'CANCELLED' } : b);
+        renderAll();
+        updateTokenStatusInCloud(id, 'CANCELLED');
+
+        // Trigger automatic alert to next 2 patients in queue!
+        dispatchAutoAlertToNextTwo('CANCELLED', cancelledToken);
+      }
+    }
+
+    // Update Token Status to Cloud Firestore
+    async function updateTokenStatusInCloud(tokenId, newStatus) {
+      try {
+        const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/tokens/${tokenId}?updateMask.fieldPaths=status&updateMask.fieldPaths=updatedAt&key=${FIREBASE_CONFIG.apiKey}`;
+        await fetch(url, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fields: {
+              status: { stringValue: newStatus },
+              updatedAt: { stringValue: new Date().toISOString() }
+            }
+          })
+        });
+      } catch (err) {
+        console.warn('[ArkCare Cloud Update] Could not sync status to cloud:', err.message);
+      }
+    }
+
+    // Walk-In Generator
+    function populateWalkinDoctors() {
+      const select = document.getElementById('walkinDoctorSelect');
+      const h = getCurrentHospital();
+      select.innerHTML = h.doctors.map(d => `
+        <option value="${d.id}" ${d.id === selectedDoctorId ? 'selected' : ''}>
+          ${d.name} — ${d.specialty} (${d.room})
+        </option>
+      `).join('');
+    }
+
+    async function handleIssueWalkin(e) {
+      e.preventDefault();
+      const docId = document.getElementById('walkinDoctorSelect').value;
+      const h = getCurrentHospital();
+      const doc = h.doctors.find(d => d.id === docId) || docId;
+      const name = document.getElementById('walkinName').value.trim();
+      const phone = document.getElementById('walkinPhone').value.trim();
+      const age = parseInt(document.getElementById('walkinAge').value) || 30;
+      const gender = document.getElementById('walkinGender').value;
+
+      const docBookings = BOOKINGS.filter(b => b.hospitalId === h.id && b.doctorId === doc.id);
+      const nextSeq = docBookings.length + 1;
+      const displayToken = `${doc.prefix}-${String(nextSeq).padStart(3, '0')}`;
+      const tokenId = `ARKC${Date.now()}`;
+
+      const newBooking = {
+        id: tokenId,
+        displayToken,
+        sequenceNumber: nextSeq,
+        hospitalId: h.id,
+        doctorId: doc.id,
+        doctorName: doc.name,
+        patientName: name,
+        patientPhone: phone,
+        patientAge: age,
+        patientGender: gender,
+        status: 'CONFIRMED',
+        paymentStatus: 'FREE',
+        paymentMethod: 'Direct Walk-In (No Fee)',
+        paymentReference: `WALK-${Math.floor(1000 + Math.random() * 9000)}`,
+        feeAmount: 0,
+        source: 'Walk-In Desk',
+        createdAt: new Date().toISOString()
+      };
+
+      BOOKINGS.push(newBooking);
+
+      const msg = document.getElementById('walkinSuccessMsg');
+      msg.innerHTML = `✅ Token <strong>${displayToken}</strong> issued for <strong>${name}</strong> at ${h.name}!`;
+      msg.classList.remove('hidden');
+
+      document.getElementById('walkinName').value = '';
+      document.getElementById('walkinPhone').value = '';
+
+      renderAll();
+
+      try {
+        const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/tokens/${tokenId}?key=${FIREBASE_CONFIG.apiKey}`;
+        await fetch(url, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fields: {
+              id: { stringValue: tokenId },
+              tokenDisplay: { stringValue: displayToken },
+              tokenNumber: { integerValue: String(nextSeq) },
+              hospitalId: { stringValue: h.id },
+              hospitalName: { stringValue: h.name },
+              doctorId: { stringValue: doc.id },
+              doctorName: { stringValue: doc.name },
+              patientName: { stringValue: name },
+              patientPhone: { stringValue: phone },
+              patientAge: { integerValue: String(age) },
+              patientGender: { stringValue: gender },
+              status: { stringValue: 'CONFIRMED' },
+              paymentStatus: { stringValue: 'FREE' },
+              paymentMethod: { stringValue: 'Direct Walk-In (No Fee)' },
+              paymentReference: { stringValue: newBooking.paymentReference },
+              feeAmount: { doubleValue: 0.0 },
+              source: { stringValue: 'Walk-In Desk' },
+              createdAt: { stringValue: new Date().toISOString() }
+            }
+          })
+        });
+      } catch (err) {
+        console.warn('[ArkCare Cloud] Could not sync walkin token to cloud:', err.message);
+      }
+
+      setTimeout(() => msg.classList.add('hidden'), 5000);
+    }
+
+    // Doctor Directory View
+    function renderDoctorDirectory() {
+      const grid = document.getElementById('doctorDirectoryGrid');
+      const h = getCurrentHospital();
+      grid.innerHTML = h.doctors.map(d => `
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-2xl shadow-inner">
+                  ${d.avatar || '👨🏻‍⚕️'}
+                </div>
+                <div>
+                  <h4 class="font-bold text-slate-900">${isTamil && d.nameTa ? d.nameTa : d.name}</h4>
+                  <span class="text-xs bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded mt-1 inline-block">
+                    ${isTamil && d.specialtyTa ? d.specialtyTa : d.specialty}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 space-y-1.5 text-xs text-slate-600">
+              <div><strong class="text-slate-800">Qualification:</strong> ${d.qualification}</div>
+              <div><strong class="text-slate-800">OPD Room:</strong> ${d.room}</div>
+              <div><strong class="text-slate-800">Token Prefix:</strong> <span class="font-mono font-bold text-slate-900">${d.prefix}</span></div>
+              <div><strong class="text-slate-800">Daily Max Tokens:</strong> ${d.dailyCapacity}</div>
+              <div><strong class="text-slate-800">Avg Time / Patient:</strong> ${d.avgConsultMinutes} mins</div>
+            </div>
+          </div>
+
+          <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
+            <span class="text-xs text-emerald-600 font-bold">🟢 Active in ${h.city}</span>
+            <button onclick="selectDoctor('${d.id}'); switchTab('queue');" class="text-xs font-bold text-slate-800 hover:text-emerald-700">
+              View Live Queue →
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Reports View
+    function renderReports() {
+      const hospBookings = getHospitalBookings();
+      document.getElementById('repHospTokens').innerText = hospBookings.length;
+      const totalRev = hospBookings.reduce((sum, b) => sum + (b.paymentStatus === 'PAID' ? b.feeAmount : 0), 0);
+      document.getElementById('repHospRevenue').innerText = `₹${totalRev}`;
+      document.getElementById('repHospServed').innerText = hospBookings.filter(b => b.status === 'COMPLETED').length;
+
+      const tbody = document.getElementById('invoiceTableBody');
+      if (hospBookings.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">No invoices recorded for this facility yet.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = hospBookings.map(b => `
+        <tr class="hover:bg-slate-50">
+          <td class="py-2.5 px-3 font-mono font-bold text-slate-700">${b.paymentReference || 'N/A'}</td>
+          <td class="py-2.5 px-3 font-bold text-slate-900">${b.displayToken}</td>
+          <td class="py-2.5 px-3 font-medium text-slate-800">${b.patientName}</td>
+          <td class="py-2.5 px-3 text-slate-600">${b.doctorName}</td>
+          <td class="py-2.5 px-3 font-bold text-emerald-700">₹${b.feeAmount}.00</td>
+          <td class="py-2.5 px-3 text-slate-500">${b.paymentMethod || 'Online'}</td>
+          <td class="py-2.5 px-3 text-slate-400">${new Date(b.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+        </tr>
+      `).join('');
+    }
+
+    // Modal Handlers
+    function openAddDoctorModal() {
+      const h = getCurrentHospital();
+      document.getElementById('modalHospitalLabel').innerText = `Adding doctor to ${h.name} (${h.city})`;
+      document.getElementById('addDocModal').classList.remove('hidden');
+    }
+
+    function closeAddDoctorModal() {
+      document.getElementById('addDocModal').classList.add('hidden');
+    }
+
+    function handleCreateDoctor(e) {
+      e.preventDefault();
+      const name = document.getElementById('newDocName').value.trim();
+      const nameTa = document.getElementById('newDocNameTa').value.trim();
+      const specialty = document.getElementById('newDocSpecialty').value.trim();
+      const prefix = document.getElementById('newDocPrefix').value.trim().toUpperCase();
+      const qual = document.getElementById('newDocQual').value.trim();
+      const room = document.getElementById('newDocRoom').value.trim();
+      const cap = parseInt(document.getElementById('newDocCapacity').value) || 35;
+
+      const newDoc = {
+        id: `doc-${Date.now()}`,
+        name,
+        nameTa: nameTa || undefined,
+        specialty,
+        qualification: qual,
+        room,
+        prefix,
+        dailyCapacity: cap,
+        avgConsultMinutes: 5,
+        avatar: '👨🏻‍⚕️'
+      };
+
+      const h = getCurrentHospital();
+      h.doctors.push(newDoc);
+      selectedDoctorId = newDoc.id;
+
+      closeAddDoctorModal();
+      document.getElementById('newDocName').value = '';
+      document.getElementById('newDocNameTa').value = '';
+      renderAll();
+    }
+
+    // Populate Both Hospital Dropdown Menus
+    function populateHospitalDropdowns() {
+      const optionsHtml = HOSPITALS.map(h => `
+        <option value="${h.id}">
+          ${isTamil && h.nameTa ? h.nameTa : h.name} (${isTamil && h.cityTa ? h.cityTa : h.city})
+        </option>
+      `).join('');
+
+      document.getElementById('loginHospitalSelect').innerHTML = optionsHtml;
+      const signupHospSelect = document.getElementById('signupHospitalSelect');
+      if (signupHospSelect) signupHospSelect.innerHTML = optionsHtml;
+      document.getElementById('navHospitalSelect').innerHTML = optionsHtml;
+    }
+
+    // Automatic Real-Time Polling
+    function startAutoSync() {
+      if (syncIntervalId) clearInterval(syncIntervalId);
+      syncIntervalId = setInterval(fetchCloudTokens, 5000);
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      populateHospitalDropdowns();
+
+      const savedSession = sessionStorage.getItem('arkcare_hosp_admin_session');
+      if (savedSession) {
+        try {
+          currentUser = JSON.parse(savedSession);
+          selectedHospitalId = currentUser.hospitalId || 'hosp-001';
+          const h = getCurrentHospital();
+          if (h.doctors.length > 0) selectedDoctorId = h.doctors[0].id;
+
+          document.getElementById('loginScreen').classList.add('hidden');
+          document.getElementById('mainApp').classList.remove('hidden');
+          updateNavbar();
+          fetchCloudTokens();
+          startAutoSync();
+          return;
+        } catch (e) {
+          sessionStorage.removeItem('arkcare_hosp_admin_session');
+        }
+      }
+
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('mainApp').classList.add('hidden');
+    });
+  </script>
+</body>
+</html>
